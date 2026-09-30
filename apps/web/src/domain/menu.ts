@@ -36,3 +36,10 @@ export function isPromoToday(promo: Promo, now = new Date()): boolean {
 export function hasPrice(promo: Promo): promo is Promo & { price: number } {
   return typeof promo.price === "number" && promo.price > 0;
 }
+
+/** Volume da bebida tirado do nome, para o selo do card: "Coca-Cola 2L" → "2L", "Guaraná 1,5L" → "1,5L". */
+export function drinkVolume(name: string): string | null {
+  const match = /(\d+(?:[.,]\d+)?)\s?(ml|l)\b/i.exec(name);
+  if (!match) return null;
+  return match[1] + (match[2].toLowerCase() === "ml" ? "ml" : "L");
+}

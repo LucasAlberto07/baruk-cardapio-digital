@@ -2,26 +2,30 @@ import { ReactNode } from "react";
 import { Extra, Product, formatBRL } from "@baruk/shared";
 import { useCart } from "../context/CartContext";
 import { SLICE_OPTIONS } from "../domain/cart-lines";
+import { CartLine } from "../domain/cart";
 import { usePizzaBuilder } from "../hooks/usePizzaBuilder";
 
 type Props = {
   product: Product;
   extras: Extra[];
   drinks: Product[];
+  /** Item do carrinho sendo editado; ausente ao montar uma pizza nova. */
+  editing?: CartLine | null;
   onClose: () => void;
 };
 
-export function AddOnsModal({ product, extras, drinks, onClose }: Props) {
-  const { addLine } = useCart();
-  const pizza = usePizzaBuilder(product, extras, drinks);
+export function AddOnsModal({ product, extras, drinks, editing = null, onClose }: Props) {
+  const { addLine, replaceLine } = useCart();
+  const pizza = usePizzaBuilder(product, extras, drinks, editing);
 
   function confirm() {
-    addLine(pizza.toCartLine());
+    if (editing) replaceLine(editing.key, pizza.toCartLine());
+    else addLine(pizza.toCartLine());
     onClose();
   }
 
   return (
-    <div className="overlay" onClick={(event) => event.target === event.currentTarget && onClose()}>
+    <div className="overlay overlay-top" onClick={(event) => event.target === event.currentTarget && onClose()}>
       <div className="am-panel">
         <header>
           <div>
@@ -64,7 +68,7 @@ export function AddOnsModal({ product, extras, drinks, onClose }: Props) {
             <button onClick={pizza.increaseQty}>+</button>
           </div>
           <button className="am-add" onClick={confirm}>
-            <span className="l1">Adicionar ao pedido</span>
+            <span className="l1">{editing ? "Salvar alterações" : "Adicionar ao pedido"}</span>
             <span className="l2">Valor: {formatBRL(pizza.totalPrice)}</span>
           </button>
         </div>

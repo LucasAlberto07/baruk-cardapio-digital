@@ -62,3 +62,30 @@ describe("cartTotals / toOrderItems", () => {
     ]);
   });
 });
+
+describe("edição do carrinho", () => {
+  const plain = pizzaLine({ product: costela, slice: "8 fatias", extras: [], drink: null, qty: 2 });
+
+  it("mostra as escolhas da pizza como detalhes", () => {
+    const line = pizzaLine({ product: costela, slice: "12 fatias", extras: [bacon, alho], drink: sprite, qty: 1 });
+    expect(line.title).toBe("Pizza Costela");
+    expect(line.details).toEqual(["12 fatias", "Adicionais: Alho, Bacon", "Bebida: Sprite 2L"]);
+  });
+
+  it("remove a linha inteira", () => {
+    expect(cartReducer([plain, drinkLine(sprite)], { type: "remove", key: plain.key }).map((line) => line.key)).toEqual(["bebida:sprite"]);
+  });
+
+  it("substitui a linha editada mantendo a posição", () => {
+    const edited = pizzaLine({ product: costela, slice: "12 fatias", extras: [alho], drink: null, qty: 3 });
+    const lines = cartReducer([plain, drinkLine(sprite)], { type: "replace", key: plain.key, line: edited });
+    expect(lines.map((line) => [line.key, line.qty])).toEqual([[edited.key, 3], ["bebida:sprite", 1]]);
+  });
+
+  it("junta com uma linha igual que já existia", () => {
+    const other = pizzaLine({ product: costela, slice: "12 fatias", extras: [], drink: null, qty: 1 });
+    const edited = { ...other, qty: 2 };
+    const lines = cartReducer([plain, other], { type: "replace", key: plain.key, line: edited });
+    expect(lines.map((line) => [line.key, line.qty])).toEqual([[other.key, 3]]);
+  });
+});

@@ -1,14 +1,28 @@
 import { useMemo, useState } from "react";
 import { Extra, Product, SliceOption } from "@baruk/shared";
-import { MAX_QTY_PER_LINE } from "../domain/cart";
+import { CartLine, MAX_QTY_PER_LINE } from "../domain/cart";
 import { PizzaSelection, pizzaLine, pizzaUnitPrice, SLICE_OPTIONS } from "../domain/cart-lines";
 
+/** Escolhas iniciais: vazias para uma pizza nova, ou as de um item do carrinho sendo editado. */
+function initialChoices(line: CartLine | null) {
+  if (!line || line.item.kind !== "product") {
+    return { qty: 1, slice: SLICE_OPTIONS[0], extraIds: new Set<string>(), drinkId: null };
+  }
+  return {
+    qty: line.qty,
+    slice: line.item.slice ?? SLICE_OPTIONS[0],
+    extraIds: new Set(line.item.extraIds),
+    drinkId: line.item.drinkProductId,
+  };
+}
+
 /** Estado das escolhas do modal de adicionais; preço e linha do carrinho vêm do domínio. */
-export function usePizzaBuilder(product: Product, extras: Extra[], drinks: Product[]) {
-  const [qty, setQty] = useState(1);
-  const [slice, setSlice] = useState<SliceOption>(SLICE_OPTIONS[0]);
-  const [extraIds, setExtraIds] = useState<Set<string>>(new Set());
-  const [drinkId, setDrinkId] = useState<string | null>(null);
+export function usePizzaBuilder(product: Product, extras: Extra[], drinks: Product[], editing: CartLine | null = null) {
+  const [initial] = useState(() => initialChoices(editing));
+  const [qty, setQty] = useState(initial.qty);
+  const [slice, setSlice] = useState<SliceOption>(initial.slice);
+  const [extraIds, setExtraIds] = useState<Set<string>>(initial.extraIds);
+  const [drinkId, setDrinkId] = useState<string | null>(initial.drinkId);
 
   const selection: PizzaSelection = useMemo(() => ({
     product,

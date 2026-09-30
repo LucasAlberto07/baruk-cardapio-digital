@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MenuResponse } from "@baruk/shared";
-import { hasPrice, isPromoToday, organizeMenu } from "./menu";
+import { drinkVolume, hasPrice, isPromoToday, organizeMenu } from "./menu";
 
 const menu: MenuResponse = {
   categories: [
@@ -38,5 +38,14 @@ describe("promoções", () => {
   it("só considera com preço quando o valor é positivo", () => {
     expect(hasPrice(promo)).toBe(true);
     expect(hasPrice({ ...promo, price: null })).toBe(false);
+  });
+});
+
+describe("drinkVolume", () => {
+  it("extrai o volume do nome da bebida", () => {
+    expect(drinkVolume("Coca-Cola Zero 2L")).toBe("2L");
+    expect(drinkVolume("Guaraná Antarctica 1,5L")).toBe("1,5L");
+    expect(drinkVolume("Suco lata 350 ml")).toBe("350ml");
+    expect(drinkVolume("Água sem gás")).toBeNull();
   });
 });

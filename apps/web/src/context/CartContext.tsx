@@ -7,6 +7,8 @@ type CartContextValue = {
   totalPrice: number;
   addLine: (line: CartLine) => void;
   changeQty: (key: string, delta: number) => void;
+  removeLine: (key: string) => void;
+  replaceLine: (key: string, line: CartLine) => void;
   clear: () => void;
 };
 
@@ -21,6 +23,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     ...cartTotals(lines),
     addLine: (line) => dispatch({ type: "add", line }),
     changeQty: (key, delta) => dispatch({ type: "changeQty", key, delta }),
+    removeLine: (key) => dispatch({ type: "remove", key }),
+    replaceLine: (key, line) => dispatch({ type: "replace", key, line }),
     clear: () => dispatch({ type: "clear" }),
   }), [lines]);
 
