@@ -1,4 +1,4 @@
-import { Product, Extra } from "@baruk/shared";
+import { Product, Extra, Category, Promo } from "@baruk/shared";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 const adminHeaders = (headers: Record<string, string> = {}) => ({ ...headers, "x-admin-key": sessionStorage.getItem("baruk-admin-key") ?? "" });
@@ -48,5 +48,38 @@ export const api = {
         body: JSON.stringify(data),
       }).then((r) => json<Extra>(r)),
     remove: (id: string) => fetch(`${API_URL}/api/extras/${id}`, { method: "DELETE", headers: adminHeaders() }).then((r) => json<void>(r)),
+  },
+  categories: {
+    list: () => fetch(`${API_URL}/api/categories`, { headers: adminHeaders() }).then((r) => json<(Category & { _count: { products: number } })[]>(r)),
+    create: (data: { name: string; sortOrder?: number }) =>
+      fetch(`${API_URL}/api/categories`, {
+        method: "POST",
+        headers: adminHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(data),
+      }).then((r) => json<Category>(r)),
+    // O slug não é editável.
+    update: (id: string, data: Partial<Pick<Category, "name" | "sortOrder">>) =>
+      fetch(`${API_URL}/api/categories/${id}`, {
+        method: "PUT",
+        headers: adminHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(data),
+      }).then((r) => json<Category>(r)),
+    remove: (id: string) => fetch(`${API_URL}/api/categories/${id}`, { method: "DELETE", headers: adminHeaders() }).then((r) => json<void>(r)),
+  },
+  promos: {
+    list: () => fetch(`${API_URL}/api/promos`).then((r) => json<Promo[]>(r)),
+    create: (data: Omit<Promo, "id">) =>
+      fetch(`${API_URL}/api/promos`, {
+        method: "POST",
+        headers: adminHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(data),
+      }).then((r) => json<Promo>(r)),
+    update: (id: string, data: Partial<Omit<Promo, "id">>) =>
+      fetch(`${API_URL}/api/promos/${id}`, {
+        method: "PUT",
+        headers: adminHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(data),
+      }).then((r) => json<Promo>(r)),
+    remove: (id: string) => fetch(`${API_URL}/api/promos/${id}`, { method: "DELETE", headers: adminHeaders() }).then((r) => json<void>(r)),
   },
 };

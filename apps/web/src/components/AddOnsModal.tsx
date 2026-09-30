@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Product, Extra, formatBRL } from "@baruk/shared";
+import { Product, Extra, formatBRL, unitPriceCents } from "@baruk/shared";
 import { useCart } from "../context/CartContext";
 
 const FATIAS = ["8 fatias", "12 fatias"] as const;
@@ -18,13 +18,11 @@ export function AddOnsModal({ product, extras, drinks, onClose }: Props) {
   const [selectedExtras, setSelectedExtras] = useState<Set<string>>(new Set());
   const [drinkId, setDrinkId] = useState<string>("none");
 
+  // Mesma conta que a API usa para cobrar o pedido.
   const unit = useMemo(() => {
-    const extrasSum = [...selectedExtras].reduce((a, id) => {
-      const e = extras.find((x) => x.id === id);
-      return a + (e ? e.price : 0);
-    }, 0);
+    const extraPrices = extras.filter((e) => selectedExtras.has(e.id)).map((e) => e.price);
     const drink = drinks.find((d) => d.id === drinkId);
-    return Math.round((product.price + extrasSum + (drink ? drink.price : 0)) * 100) / 100;
+    return unitPriceCents({ base: product.price, extras: extraPrices, drink: drink?.price ?? null }) / 100;
   }, [selectedExtras, drinkId, extras, drinks, product.price]);
 
   function toggleExtra(id: string) {
@@ -105,7 +103,7 @@ export function AddOnsModal({ product, extras, drinks, onClose }: Props) {
           </div>
           <button className="am-add" onClick={confirm}>
             <span className="l1">Adicionar ao pedido</span>
-            <span className="l2">Valor: {formatBRL(unit * qty)}</span>
+            <span className="l2">Valor: {formatBRL(Math.round(unit * 100) * qty / 100)}</span>
           </button>
         </div>
       </div>

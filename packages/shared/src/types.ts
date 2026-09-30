@@ -54,8 +54,10 @@ export type OrderPayload = {
   customerName: string;
   address: string;
   notes?: string;
+  // Cada item é um produto (productId) OU uma promoção do dia (promoId), nunca os dois.
   items: {
-    productId: string;
+    productId?: string;
+    promoId?: string;
     qty: number;
     extraIds?: string[];
     drinkProductId?: string | null;

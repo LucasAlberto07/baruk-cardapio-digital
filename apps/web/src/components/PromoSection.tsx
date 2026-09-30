@@ -1,4 +1,4 @@
-import { Promo, formatBRL } from "@baruk/shared";
+import { Promo, formatBRL, weekdayInSaoPaulo } from "@baruk/shared";
 import { useCart } from "../context/CartContext";
 
 type Props = {
@@ -9,7 +9,8 @@ type Props = {
 
 export function PromoSection({ promos, appliedId, onToggle }: Props) {
   const { addLine } = useCart();
-  const today = new Date().getDay();
+  // Mesmo fuso que a API usa para validar a promoção do dia.
+  const today = weekdayInSaoPaulo();
 
   return (
     <section className="menu-section" id="sec0">
@@ -25,9 +26,14 @@ export function PromoSection({ promos, appliedId, onToggle }: Props) {
               <p>{p.description}</p>
               {p.note && <span className="note">{p.note}</span>}
               {p.price ? (
-                <button className="price-btn" onClick={() => addLine("promo:" + p.id, `${p.title} (${p.label})`, p.price!)}>
-                  <small>+</small>{formatBRL(p.price)}
-                </button>
+                // A API só aceita a promoção com preço no dia dela.
+                isToday ? (
+                  <button className="price-btn" onClick={() => addLine("promo:" + p.id, `${p.title} (${p.label})`, p.price!, 1, { promoId: p.id })}>
+                    <small>+</small>{formatBRL(p.price)}
+                  </button>
+                ) : (
+                  <span className="note">Disponível só {p.label.toLowerCase()} · {formatBRL(p.price)}</span>
+                )
               ) : (
                 <button
                   className={"use-btn" + (appliedId === p.id ? " on" : "")}

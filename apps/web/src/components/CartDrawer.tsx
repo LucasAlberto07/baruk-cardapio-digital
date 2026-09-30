@@ -22,13 +22,15 @@ export function CartDrawer({ open, onClose, appliedPromo }: Props) {
       return;
     }
 
-    const items: OrderPayload["items"] = lines.map((line) => ({
-      productId: line.productId,
-      qty: line.qty,
-      extraIds: line.extraIds,
-      drinkProductId: line.drinkProductId,
-      slice: line.slice,
-    }));
+    const items: OrderPayload["items"] = lines.map((line) => line.promoId
+      ? { promoId: line.promoId, qty: line.qty }
+      : {
+          productId: line.productId,
+          qty: line.qty,
+          extraIds: line.extraIds,
+          drinkProductId: line.drinkProductId,
+          slice: line.slice,
+        });
     const payload: OrderPayload = { customerName: name, address, notes, items };
 
     let confirmedOrder: { total: number; items: { label: string; qty: number; unitPrice: number }[] } | null = null;

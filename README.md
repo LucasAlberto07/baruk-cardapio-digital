@@ -58,6 +58,42 @@ npm run dev:admin      # http://localhost:5174  (painel do lojista)
   payload do navegador contém apenas IDs de produtos/opções e quantidades.
 - Aplique migrações no deploy com `npm run prisma:deploy --workspace api`; o seed
   é uma operação separada e transacional.
+- Em produção **sem `CORS_ORIGINS`** a API bloqueia todos os navegadores (a API
+  avisa no log ao subir). Liste os domínios do web e do admin separados por vírgula.
+- `POST /api/orders` e `POST /api/admin/session` têm limite de 10 requisições a
+  cada 15 min por IP. Atrás de proxy (Railway/Render) defina `TRUST_PROXY=1`.
+- O build da API (`npm run build --workspace api`) usa tsup e embute o
+  `@baruk/shared` no `dist/server.js`.
+
+## Regras de negócio compartilhadas
+
+`packages/shared` concentra o que o cardápio e a API precisam concordar:
+- `unitPriceCents` — preço em centavos (produto + adicionais + bebida). O
+  cardápio mostra e a API cobra com a mesma função.
+- `isDrinkCategory` — a categoria com slug `bebidas`. O slug de categoria não é
+  editável pela API, então renomear a categoria não quebra a regra.
+- `weekdayInSaoPaulo` — dia da semana no fuso da pizzaria. Promoções com preço só
+  são aceitas no próprio dia.
+
+## Rotas da API
+
+| Rota | Acesso |
+|---|---|
+| `GET /api/menu` | público |
+| `POST /api/orders` | público (rate limit) |
+| `GET /api/orders` | admin |
+| `/api/products` | admin |
+| `GET /api/extras`, `GET /api/promos` | público |
+| `POST/PUT/DELETE /api/extras`, `/api/promos` | admin |
+| `/api/categories` | admin |
+
+Admin = header `x-admin-key` com o valor de `ADMIN_API_KEY`.
+
+## Testes
+
+```bash
+npm test   # vitest em packages/shared e api (a API usa Prisma mockado, não precisa de banco)
+```
 
 ## Deploy sugerido
 

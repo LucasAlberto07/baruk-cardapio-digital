@@ -8,7 +8,7 @@ import { PromoSection } from "./components/PromoSection";
 import { ProductRail } from "./components/ProductRail";
 import { AddOnsModal } from "./components/AddOnsModal";
 import { CartDrawer } from "./components/CartDrawer";
-import { formatBRL } from "@baruk/shared";
+import { formatBRL, isDrinkCategory } from "@baruk/shared";
 
 function CardapioContent() {
   const { menu, loading, error } = useMenu();
@@ -27,10 +27,10 @@ function CardapioContent() {
     );
   }
 
-  const categories = menu.categories.filter((c) => c.slug !== "bebidas").concat(
-    menu.categories.filter((c) => c.slug === "bebidas")
+  const categories = menu.categories.filter((c) => !isDrinkCategory(c)).concat(
+    menu.categories.filter((c) => isDrinkCategory(c))
   );
-  const drinks = menu.products.filter((p) => p.categoryId === menu.categories.find((c) => c.slug === "bebidas")?.id);
+  const drinks = menu.products.filter((p) => p.categoryId === menu.categories.find(isDrinkCategory)?.id);
   const sections = ["Promoções", ...categories.map((c) => c.name)];
   const appliedPromo = menu.promos.find((p) => p.id === appliedPromoId) ?? null;
 

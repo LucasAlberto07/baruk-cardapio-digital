@@ -9,6 +9,10 @@ export function validText(value: unknown, maxLength: number, allowEmpty = false)
   return typeof value === "string" && (allowEmpty || value.trim().length > 0) && value.length <= maxLength;
 }
 
+export function slugify(value: string): string {
+  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
 export function validPrice(value: unknown, allowZero = false): value is number {
   if (typeof value !== "number" || !Number.isFinite(value) || value > MAX_PRICE) return false;
   if (allowZero && value === 0) return true;

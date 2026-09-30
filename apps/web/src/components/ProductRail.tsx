@@ -1,4 +1,4 @@
-import { Category, Product, formatBRL } from "@baruk/shared";
+import { Category, Product, formatBRL, isDrinkCategory } from "@baruk/shared";
 import { useCart } from "../context/CartContext";
 
 type Props = {
@@ -10,7 +10,7 @@ type Props = {
 
 export function ProductRail({ index, category, products, onOpenAddOns }: Props) {
   const { addLine } = useCart();
-  const isDrinks = category.slug === "bebidas";
+  const isDrinks = isDrinkCategory(category);
 
   return (
     <section className="menu-section" id={"sec" + (index + 1)}>

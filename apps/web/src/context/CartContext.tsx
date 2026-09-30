@@ -5,13 +5,15 @@ export type CartLine = {
   label: string;
   unitPrice: number;
   qty: number;
-  productId: string;
+  // Uma linha é um produto OU uma promoção do dia.
+  productId?: string;
+  promoId?: string;
   extraIds?: string[];
   drinkProductId?: string | null;
   slice?: "8 fatias" | "12 fatias";
 };
 
-type CartSelection = Pick<CartLine, "productId" | "extraIds" | "drinkProductId" | "slice">;
+type CartSelection = Pick<CartLine, "productId" | "promoId" | "extraIds" | "drinkProductId" | "slice">;
 
 type CartContextValue = {
   lines: CartLine[];

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import { requireAdmin } from "../lib/admin-auth";
 import { asyncHandler } from "../lib/async-handler";
-import { isRecord, validPrice, validText } from "../lib/validation";
+import { isRecord, slugify, validPrice, validText } from "../lib/validation";
 
 export const productsRouter = Router();
 
@@ -29,7 +29,7 @@ productsRouter.post("/", asyncHandler(async (req, res) => {
   } else {
     if (!validText(categoryName, 80)) return res.status(400).json({ error: "Nome de categoria inválido." });
     const cleanCategoryName = categoryName.trim();
-    const slug = cleanCategoryName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const slug = slugify(cleanCategoryName);
     if (!slug) return res.status(400).json({ error: "Nome de categoria inválido." });
     const category = await prisma.category.upsert({
       where: { slug },
