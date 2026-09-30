@@ -1,68 +1,34 @@
-import { createContext, useContext, useMemo, useState, ReactNode } from "react";
-
-export type CartLine = {
-  key: string;
-  label: string;
-  unitPrice: number;
-  qty: number;
-  // Uma linha é um produto OU uma promoção do dia.
-  productId?: string;
-  promoId?: string;
-  extraIds?: string[];
-  drinkProductId?: string | null;
-  slice?: "8 fatias" | "12 fatias";
-};
-
-type CartSelection = Pick<CartLine, "productId" | "promoId" | "extraIds" | "drinkProductId" | "slice">;
+import { createContext, ReactNode, useContext, useMemo, useReducer } from "react";
+import { CartLine, cartReducer, cartTotals } from "../domain/cart";
 
 type CartContextValue = {
   lines: CartLine[];
-  addLine: (key: string, label: string, unitPrice: number, qty?: number, selection?: CartSelection) => void;
-  changeQty: (key: string, delta: number) => void;
   totalItems: number;
   totalPrice: number;
+  addLine: (line: CartLine) => void;
+  changeQty: (key: string, delta: number) => void;
   clear: () => void;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
 
+/** Só guarda o estado; as regras do carrinho ficam em domain/cart.ts. */
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [lines, setLines] = useState<CartLine[]>([]);
+  const [lines, dispatch] = useReducer(cartReducer, []);
 
-  function addLine(key: string, label: string, unitPrice: number, qty = 1, selection?: CartSelection) {
-    setLines((prev) => {
-      const existing = prev.find((l) => l.key === key);
-      if (existing) {
-        return prev.map((l) => (l.key === key ? { ...l, qty: l.qty + qty } : l));
-      }
-      return [...prev, { key, label, unitPrice, qty, ...(selection ?? { productId: key }) }];
-    });
-  }
+  const value = useMemo<CartContextValue>(() => ({
+    lines,
+    ...cartTotals(lines),
+    addLine: (line) => dispatch({ type: "add", line }),
+    changeQty: (key, delta) => dispatch({ type: "changeQty", key, delta }),
+    clear: () => dispatch({ type: "clear" }),
+  }), [lines]);
 
-  function changeQty(key: string, delta: number) {
-    setLines((prev) =>
-      prev
-        .map((l) => (l.key === key ? { ...l, qty: l.qty + delta } : l))
-        .filter((l) => l.qty > 0)
-    );
-  }
-
-  function clear() {
-    setLines([]);
-  }
-
-  const totalItems = useMemo(() => lines.reduce((a, l) => a + l.qty, 0), [lines]);
-  const totalPrice = useMemo(() => lines.reduce((a, l) => a + Math.round(l.qty * l.unitPrice * 100), 0) / 100, [lines]);
-
-  return (
-    <CartContext.Provider value={{ lines, addLine, changeQty, totalItems, totalPrice, clear }}>
-      {children}
-    </CartContext.Provider>
-  );
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {
-  const ctx = useContext(CartContext);
-  if (!ctx) throw new Error("useCart precisa estar dentro de <CartProvider>");
-  return ctx;
+  const context = useContext(CartContext);
+  if (!context) throw new Error("useCart precisa estar dentro de <CartProvider>");
+  return context;
 }

@@ -1,5 +1,8 @@
-import { Promo, formatBRL, weekdayInSaoPaulo } from "@baruk/shared";
+import { Promo, formatBRL } from "@baruk/shared";
 import { useCart } from "../context/CartContext";
+import { promoLine } from "../domain/cart-lines";
+import { hasPrice, isPromoToday } from "../domain/menu";
+import { sectionId } from "../hooks/useActiveSection";
 
 type Props = {
   promos: Promo[];
@@ -8,44 +11,52 @@ type Props = {
 };
 
 export function PromoSection({ promos, appliedId, onToggle }: Props) {
-  const { addLine } = useCart();
-  // Mesmo fuso que a API usa para validar a promoção do dia.
-  const today = weekdayInSaoPaulo();
-
   return (
-    <section className="menu-section" id="sec0">
+    <section className="menu-section" id={sectionId(0)}>
       <h2>Promoções e combos<div className="tri" /></h2>
       <div className="grid">
-        {promos.map((p) => {
-          const isToday = p.weekday === today;
-          return (
-            <div key={p.id} className={"promo" + (isToday ? " today" : "")}>
-              {isToday && <span className="badge">HOJE</span>}
-              <span className="day">{p.label}</span>
-              <h3>{p.title}</h3>
-              <p>{p.description}</p>
-              {p.note && <span className="note">{p.note}</span>}
-              {p.price ? (
-                // A API só aceita a promoção com preço no dia dela.
-                isToday ? (
-                  <button className="price-btn" onClick={() => addLine("promo:" + p.id, `${p.title} (${p.label})`, p.price!, 1, { promoId: p.id })}>
-                    <small>+</small>{formatBRL(p.price)}
-                  </button>
-                ) : (
-                  <span className="note">Disponível só {p.label.toLowerCase()} · {formatBRL(p.price)}</span>
-                )
-              ) : (
-                <button
-                  className={"use-btn" + (appliedId === p.id ? " on" : "")}
-                  onClick={() => onToggle(appliedId === p.id ? null : p.id)}
-                >
-                  {appliedId === p.id ? "Promoção aplicada ✓" : "Usar esta promoção"}
-                </button>
-              )}
-            </div>
-          );
-        })}
+        {promos.map((promo) => (
+          <PromoCard
+            key={promo.id}
+            promo={promo}
+            applied={appliedId === promo.id}
+            onToggle={() => onToggle(appliedId === promo.id ? null : promo.id)}
+          />
+        ))}
       </div>
     </section>
+  );
+}
+
+function PromoCard({ promo, applied, onToggle }: { promo: Promo; applied: boolean; onToggle: () => void }) {
+  const isToday = isPromoToday(promo);
+
+  return (
+    <div className={"promo" + (isToday ? " today" : "")}>
+      {isToday && <span className="badge">HOJE</span>}
+      <span className="day">{promo.label}</span>
+      <h3>{promo.title}</h3>
+      <p>{promo.description}</p>
+      {promo.note && <span className="note">{promo.note}</span>}
+      {hasPrice(promo)
+        ? <PromoPriceAction promo={promo} isToday={isToday} />
+        : (
+          <button className={"use-btn" + (applied ? " on" : "")} onClick={onToggle}>
+            {applied ? "Promoção aplicada ✓" : "Usar esta promoção"}
+          </button>
+        )}
+    </div>
+  );
+}
+
+/** A API só aceita a promoção com preço no dia dela. */
+function PromoPriceAction({ promo, isToday }: { promo: Promo & { price: number }; isToday: boolean }) {
+  const { addLine } = useCart();
+
+  if (!isToday) return <span className="note">Disponível só {promo.label.toLowerCase()} · {formatBRL(promo.price)}</span>;
+  return (
+    <button className="price-btn" onClick={() => addLine(promoLine(promo))}>
+      <small>+</small>{formatBRL(promo.price)}
+    </button>
   );
 }

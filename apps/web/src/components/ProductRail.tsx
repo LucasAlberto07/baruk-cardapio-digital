@@ -1,35 +1,42 @@
-import { Category, Product, formatBRL, isDrinkCategory } from "@baruk/shared";
+import { Product, formatBRL } from "@baruk/shared";
 import { useCart } from "../context/CartContext";
+import { drinkLine } from "../domain/cart-lines";
+import { MenuSection } from "../domain/menu";
+import { sectionId } from "../hooks/useActiveSection";
 
 type Props = {
-  index: number;
-  category: Category;
-  products: Product[];
+  /** Posição na navegação (a seção 0 é a de promoções). */
+  navIndex: number;
+  section: MenuSection;
   onOpenAddOns: (product: Product) => void;
 };
 
-export function ProductRail({ index, category, products, onOpenAddOns }: Props) {
+export function ProductRail({ navIndex, section, onOpenAddOns }: Props) {
   const { addLine } = useCart();
-  const isDrinks = isDrinkCategory(category);
+  // Bebida vai direto ao carrinho; pizza abre o modal de adicionais.
+  const choose = (product: Product) => (section.isDrinks ? addLine(drinkLine(product)) : onOpenAddOns(product));
 
   return (
-    <section className="menu-section" id={"sec" + (index + 1)}>
-      <h2>{category.name}<div className="tri" /></h2>
+    <section className="menu-section" id={sectionId(navIndex)}>
+      <h2>{section.category.name}<div className="tri" /></h2>
       <div className="rail">
-        {products.map((p) => (
-          <div className="card" key={p.id}>
-            <div className={isDrinks ? "pz drink" : "pz"} />
-            <h3>{p.name}</h3>
-            <p>{p.description}</p>
-            <button
-              className="price-btn"
-              onClick={() => (isDrinks ? addLine("bebida:" + p.id, p.name, p.price, 1, { productId: p.id }) : onOpenAddOns(p))}
-            >
-              <small>+</small>{formatBRL(p.price)}
-            </button>
-          </div>
+        {section.products.map((product) => (
+          <ProductCard key={product.id} product={product} isDrink={section.isDrinks} onChoose={() => choose(product)} />
         ))}
       </div>
     </section>
+  );
+}
+
+function ProductCard({ product, isDrink, onChoose }: { product: Product; isDrink: boolean; onChoose: () => void }) {
+  return (
+    <div className="card">
+      <div className={isDrink ? "pz drink" : "pz"} />
+      <h3>{product.name}</h3>
+      <p>{product.description}</p>
+      <button className="price-btn" onClick={onChoose}>
+        <small>+</small>{formatBRL(product.price)}
+      </button>
+    </div>
   );
 }

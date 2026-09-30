@@ -3,6 +3,16 @@ import { Extra, CartLineSelection, Product } from "./types";
 /** Aceita number, string ou o Decimal do Prisma (qualquer coisa com toString numérico). */
 export type PriceLike = number | string | { toString(): string };
 
+export const MIN_PRICE = 0.01;
+export const MAX_PRICE = 9999.99;
+
+/** Preço aceito no cadastro: entre R$ 0,01 e R$ 9.999,99, com no máximo duas casas decimais. */
+export function isValidPrice(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) &&
+    value >= MIN_PRICE && value <= MAX_PRICE &&
+    Math.abs(Math.round(value * 100) - value * 100) < 1e-8;
+}
+
 export function toCents(value: PriceLike): number {
   return Math.round(Number(typeof value === "number" ? value : value.toString()) * 100);
 }

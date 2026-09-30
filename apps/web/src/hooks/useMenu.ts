@@ -1,16 +1,25 @@
 import { useEffect, useState } from "react";
-import { MenuResponse } from "@baruk/shared";
-import { fetchMenu } from "../api/client";
+import { errorMessage, MenuResponse } from "@baruk/shared";
+import { fetchMenu } from "../api/menu-api";
+import { organizeMenu, OrganizedMenu } from "../domain/menu";
 
-export function useMenu() {
-  const [menu, setMenu] = useState<MenuResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
+type MenuState =
+  | { status: "loading" }
+  | { status: "error"; error: string }
+  | { status: "ready"; menu: MenuResponse; organized: OrganizedMenu };
+
+export function useMenu(): MenuState {
+  const [state, setState] = useState<MenuState>({ status: "loading" });
 
   useEffect(() => {
+    let cancelled = false;
     fetchMenu()
-      .then(setMenu)
-      .catch((e) => setError(e.message));
+      .then((menu) => !cancelled && setState({ status: "ready", menu, organized: organizeMenu(menu) }))
+      .catch((cause) => !cancelled && setState({ status: "error", error: errorMessage(cause, "Não foi possível carregar o cardápio.") }));
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  return { menu, loading: !menu && !error, error };
+  return state;
 }

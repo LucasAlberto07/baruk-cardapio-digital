@@ -56,6 +56,33 @@ Regras para código novo:
   `container.ts` e no `app.ts`.
 - Testes usam `createTestApp()` com repositórios em memória — sem banco e sem `vi.mock`.
 
+## Arquitetura dos fronts (web e admin)
+
+Mesma separação de responsabilidades da API:
+
+```
+apps/<app>/src/
+  config/env.ts   -> único lugar que lê variáveis VITE_*
+  api/            -> um gateway por recurso (products-api, orders-api...) sobre o
+                     createHttpClient do @baruk/shared
+  domain/         -> regras puras, sem React (carrinho, cardápio, mensagem do
+                     WhatsApp, validação de formulário) — é aqui que ficam os testes
+  hooks/          -> orquestram domínio + api + estado (useCheckout, useProducts...)
+  context/        -> estado compartilhado (web: carrinho via useReducer)
+  components/     -> apresentação: recebem dados e callbacks por props
+  pages/          -> compõem componentes e hooks de uma tela
+```
+
+Regras para código novo:
+- **Componentes não chamam `fetch` nem contêm regra de negócio**: usam um hook,
+  e o hook usa `domain/` e `api/`.
+- Conta de dinheiro sempre em centavos, com as funções do `@baruk/shared`
+  (`unitPriceCents`, `toCents`, `isValidPrice`) — as mesmas que a API usa.
+- Erros da API chegam como `ApiError` (mensagem pronta para exibir); use
+  `errorMessage(cause, textoPadrão)` nos `catch`.
+- `packages/shared` guarda o que front e API precisam concordar: tipos, preço,
+  regras do cardápio e o cliente HTTP.
+
 ## Rodando localmente
 
 Pré-requisitos: Node 18+, PostgreSQL rodando (local ou um serviço como Neon/Railway).
@@ -123,7 +150,7 @@ Admin = header `x-admin-key` com o valor de `ADMIN_API_KEY`.
 ## Testes
 
 ```bash
-npm test   # vitest em packages/shared e api (a API usa repositórios em memória, não precisa de banco)
+npm test   # vitest em todos os workspaces (a API usa repositórios em memória, não precisa de banco)
 ```
 
 ## Deploy sugerido
