@@ -1,0 +1,30 @@
+:root{
+  --bg:#FBF6EE; --ink:#241B14; --accent:#C1442C; --card:#FFFFFF; --line:#EAE1D2; --muted:#7A6E5D; --ok:#4F7942;
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--bg); color:var(--ink); font-family:system-ui,sans-serif; padding:24px}
+.page{max-width:640px; margin:0 auto}
+header h1{font-size:22px; margin:0 0 2px}
+header p{margin:0 0 20px; color:var(--muted); font-size:13px}
+.panel-wrap{display:flex; flex-direction:column; gap:20px}
+.panel{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px}
+.panel h2{font-size:16px; margin:0 0 14px}
+.field{margin-bottom:10px}
+.field label{display:block; font-size:12px; color:var(--muted); margin-bottom:4px}
+.field input, .field textarea{width:100%; border:1px solid var(--line); border-radius:8px; padding:9px 10px; font:inherit; font-size:14px}
+.primary{background:var(--accent); color:#fff; border:none; border-radius:8px; padding:11px 16px; font-weight:600; font-size:14px; cursor:pointer; width:100%}
+table{width:100%; border-collapse:collapse; font-size:13.5px; margin-bottom:14px}
+th{text-align:left; color:var(--muted); font-weight:500; font-size:12px; padding-bottom:8px; border-bottom:1px solid var(--line)}
+td{padding:9px 0; border-bottom:1px solid var(--line); vertical-align:middle}
+td.name{font-weight:600}
+td input{width:80px; padding:5px 6px; border:1px solid var(--line); border-radius:6px; font-size:13px}
+td.actions{text-align:right}
+td.actions button{border:none; background:none; cursor:pointer; font-size:13px; color:var(--accent)}
+.muted{color:var(--muted); font-size:12px; font-weight:400}
+.empty{color:var(--muted); font-size:13px}
+.error{color:#a32618;font-size:13px}
+.notice{color:var(--ok);font-size:13px}
+.login-panel{max-width:420px;margin:32px auto}
+.save-price{margin-left:6px;border:0;border-radius:6px;padding:6px 8px;background:var(--ok);color:#fff;cursor:pointer}
+.save-price:disabled,.primary:disabled{opacity:.6;cursor:wait}
+.logout{border:0;background:none;color:var(--accent);padding:6px 0;cursor:pointer}

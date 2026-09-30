@@ -1,0 +1,11 @@
+{
+  "name": "baruk-cardapio-digital",
+  "private": true,
+  "workspaces": ["apps/*", "api", "packages/*"],
+  "scripts": {
+    "dev:api": "npm run dev --workspace=api",
+    "dev:web": "npm run dev --workspace=web",
+    "dev:admin": "npm run dev --workspace=admin",
+    "db:seed": "npm run seed --workspace=api"
+  }
+}
