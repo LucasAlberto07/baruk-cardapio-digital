@@ -25,6 +25,37 @@ Por que separado assim:
 - A API não sabe nada de React; ela só expõe dados. Isso permite trocar o
   frontend no futuro (ex.: um app mobile) sem tocar no backend.
 
+## Arquitetura da API
+
+A API segue SOLID em camadas, organizada por módulo:
+
+```
+api/src/
+  server.ts          -> lê a config, monta o container e sobe o servidor
+  app.ts             -> createApp(deps): só conecta middlewares e rotas recebidos
+  container.ts       -> composition root: Prisma → repositórios → services
+  config/env.ts      -> variáveis de ambiente validadas com zod
+  core/              -> erros de domínio, dinheiro, helpers de validação (sem Express/Prisma)
+  http/              -> Express: auth admin, CORS, rate limit, error handler
+  infra/prisma/      -> PrismaClient e tradução dos erros do Prisma
+  modules/<módulo>/
+    *.schemas.ts     -> valida e normaliza a entrada (zod)
+    *.repository.ts  -> interface + implementação Prisma (converte Decimal → number)
+    *.service.ts     -> regras de negócio; depende só das interfaces
+    *.routes.ts      -> controller fino: parse → service → resposta
+  test-support/      -> repositórios em memória e app de teste
+```
+
+Regras para código novo:
+- **Rotas não têm regra de negócio** e **services não conhecem Express nem Prisma**.
+  Um service recebe os repositórios pelo construtor (inversão de dependência).
+- Erros de negócio são lançados como `ValidationError`, `NotFoundError`,
+  `ConflictError`... (`core/errors.ts`); só o `http/error-handler.ts` os
+  transforma em status HTTP.
+- Um módulo novo = schemas + repository + service + routes, registrado no
+  `container.ts` e no `app.ts`.
+- Testes usam `createTestApp()` com repositórios em memória — sem banco e sem `vi.mock`.
+
 ## Rodando localmente
 
 Pré-requisitos: Node 18+, PostgreSQL rodando (local ou um serviço como Neon/Railway).
@@ -92,7 +123,7 @@ Admin = header `x-admin-key` com o valor de `ADMIN_API_KEY`.
 ## Testes
 
 ```bash
-npm test   # vitest em packages/shared e api (a API usa Prisma mockado, não precisa de banco)
+npm test   # vitest em packages/shared e api (a API usa repositórios em memória, não precisa de banco)
 ```
 
 ## Deploy sugerido
