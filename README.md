@@ -1,180 +1,62 @@
-# Baruk Pizzaria & Esfiharia — Cardápio Digital (Full-stack)
+# Baruk Pizzaria & Esfiharia — Cardápio Digital
 
-Monorepo com backend (API) e dois frontends em React: o cardápio do cliente e o
-painel do lojista. Os dois consomem a mesma API, então uma mudança de preço no
-painel aparece no cardápio na hora.
+Sistema de pedidos online da Baruk: o cliente monta o pedido no **cardápio web**, o
+pedido é registrado na **API** e enviado para o WhatsApp da loja, e o lojista
+acompanha tudo no **painel admin** — fila de pedidos, etapas (Confirmado → Em
+preparo → Saiu para entrega → Concluído), avisos ao cliente pelo WhatsApp e
+edição de preços do cardápio.
 
-## Estrutura
+## Stack
 
-```
-apps/
-  web/      -> React (Vite) — cardápio do cliente, carrinho, checkout WhatsApp
-  admin/    -> React (Vite) — painel do lojista: categorias, produtos, extras
-api/        -> Node + Express + Prisma — API REST + banco PostgreSQL
-packages/
-  shared/   -> tipos e cálculo de preço usados pelos dois frontends
-```
+| Parte | Tecnologia |
+|---|---|
+| API | Node.js, Express 4, Prisma 5, PostgreSQL (Neon), zod, TypeScript |
+| Cardápio (`apps/web`) | React 18 + Vite 5, TypeScript |
+| Painel (`apps/admin`) | React 18 + Vite 5, TypeScript |
+| Código compartilhado (`packages/shared`) | TypeScript puro (tipos, preço, regras, cliente HTTP) |
+| Testes | Vitest (+ Supertest na API) — 103 testes, sem precisar de banco |
 
-Por que separado assim:
-- `packages/shared` existe para que a lógica de "quanto custa esse item com esses
-  adicionais" só exista em um lugar. Sem isso, web e admin acabam com contas
-  duplicadas que um dia ficam diferentes uma da outra.
-- `admin` é um app à parte (não uma tela dentro do `web`) porque tem outro
-  público (o lojista) e outra necessidade de autenticação — crescer um não
-  força mudança no outro.
-- A API não sabe nada de React; ela só expõe dados. Isso permite trocar o
-  frontend no futuro (ex.: um app mobile) sem tocar no backend.
-
-## Arquitetura da API
-
-A API segue SOLID em camadas, organizada por módulo:
+## Estrutura do monorepo
 
 ```
-api/src/
-  server.ts          -> lê a config, monta o container e sobe o servidor
-  app.ts             -> createApp(deps): só conecta middlewares e rotas recebidos
-  container.ts       -> composition root: Prisma → repositórios → services
-  config/env.ts      -> variáveis de ambiente validadas com zod
-  core/              -> erros de domínio, dinheiro, helpers de validação (sem Express/Prisma)
-  http/              -> Express: auth admin, CORS, rate limit, error handler
-  infra/prisma/      -> PrismaClient e tradução dos erros do Prisma
-  modules/<módulo>/
-    *.schemas.ts     -> valida e normaliza a entrada (zod)
-    *.repository.ts  -> interface + implementação Prisma (converte Decimal → number)
-    *.service.ts     -> regras de negócio; depende só das interfaces
-    *.routes.ts      -> controller fino: parse → service → resposta
-  test-support/      -> repositórios em memória e app de teste
+api/                -> API REST (camadas: routes → service → repository)
+apps/web/           -> cardápio do cliente, carrinho e checkout
+apps/admin/         -> painel do lojista: pedidos e cardápio
+packages/shared/    -> regras e tipos usados pela API e pelos dois fronts
+docs/               -> documentação técnica (comece por aqui)
 ```
 
-Regras para código novo:
-- **Rotas não têm regra de negócio** e **services não conhecem Express nem Prisma**.
-  Um service recebe os repositórios pelo construtor (inversão de dependência).
-- Erros de negócio são lançados como `ValidationError`, `NotFoundError`,
-  `ConflictError`... (`core/errors.ts`); só o `http/error-handler.ts` os
-  transforma em status HTTP.
-- Um módulo novo = schemas + repository + service + routes, registrado no
-  `container.ts` e no `app.ts`.
-- Testes usam `createTestApp()` com repositórios em memória — sem banco e sem `vi.mock`.
+## Início rápido
 
-## Arquitetura dos fronts (web e admin)
-
-Mesma separação de responsabilidades da API:
-
-```
-apps/<app>/src/
-  config/env.ts   -> único lugar que lê variáveis VITE_*
-  api/            -> um gateway por recurso (products-api, orders-api...) sobre o
-                     createHttpClient do @baruk/shared
-  domain/         -> regras puras, sem React (carrinho, cardápio, mensagem do
-                     WhatsApp, validação de formulário) — é aqui que ficam os testes
-  hooks/          -> orquestram domínio + api + estado (useCheckout, useProducts...)
-  context/        -> estado compartilhado (web: carrinho via useReducer)
-  components/     -> apresentação: recebem dados e callbacks por props
-  pages/          -> compõem componentes e hooks de uma tela
-```
-
-Regras para código novo:
-- **Componentes não chamam `fetch` nem contêm regra de negócio**: usam um hook,
-  e o hook usa `domain/` e `api/`.
-- Conta de dinheiro sempre em centavos, com as funções do `@baruk/shared`
-  (`unitPriceCents`, `toCents`, `isValidPrice`) — as mesmas que a API usa.
-- Erros da API chegam como `ApiError` (mensagem pronta para exibir); use
-  `errorMessage(cause, textoPadrão)` nos `catch`.
-- `packages/shared` guarda o que front e API precisam concordar: tipos, preço,
-  regras do cardápio e o cliente HTTP.
-
-## Rodando localmente
-
-Pré-requisitos: Node 18+, PostgreSQL rodando (local ou um serviço como Neon/Railway).
+Pré-requisitos: Node.js 20+ e um banco PostgreSQL.
 
 ```bash
 npm install
+cp api/.env.example api/.env          # preencha DATABASE_URL e ADMIN_API_KEY
+cp apps/web/.env.example apps/web/.env
+cp apps/admin/.env.example apps/admin/.env
 
-# configure a connection string do banco
-cp api/.env.example api/.env
-# edite api/.env com DATABASE_URL e uma ADMIN_API_KEY aleatória e forte
+npm run prisma:deploy --workspace api # aplica as migrações existentes
+npm run db:seed                       # cardápio inicial (categorias, sabores, promoções)
 
-npm run prisma:migrate --workspace api  # cria/atualiza as tabelas
-npm run db:seed        # insere os sabores/preços atuais
-npm run dev:api        # http://localhost:3001
-npm run dev:web        # http://localhost:5173  (cardápio do cliente)
-npm run dev:admin      # http://localhost:5174  (painel do lojista)
+npm run dev:api     # http://localhost:3001
+npm run dev:web     # http://localhost:5173  (cardápio)
+npm run dev:admin   # http://localhost:5174  (painel — pede a ADMIN_API_KEY)
+
+npm test            # todos os testes
 ```
 
-## Antes de publicar
+Detalhes, variáveis de ambiente e cuidados com o banco em
+[docs/DESENVOLVIMENTO.md](docs/DESENVOLVIMENTO.md).
 
-- Em `apps/web/.env` (crie a partir de `.env.example`), defina `VITE_WHATSAPP_NUMBER`
-  com o número real da pizzaria (DDI+DDD+número, só dígitos).
-- Em produção, configure `DATABASE_URL`, `ADMIN_API_KEY`, `CORS_ORIGINS` e `PORT`
-  no ambiente do servidor. Use HTTPS e uma chave administrativa aleatória, longa,
-  exclusiva e nunca incluída no bundle do frontend.
-- A tela do admin solicita a chave administrativa. Ela protege as rotas de
-  produtos, adicionais e leitura de pedidos. Rotacione a chave se houver suspeita
-  de exposição.
-- Preços de produtos/adicionais aceitam de R$ 0,01 a R$ 9.999,99, em centavos.
-  O servidor recalcula o valor dos pedidos usando os preços atuais no banco; o
-  payload do navegador contém apenas IDs de produtos/opções e quantidades.
-- Aplique migrações no deploy com `npm run prisma:deploy --workspace api`; o seed
-  é uma operação separada e transacional.
-- Em produção **sem `CORS_ORIGINS`** a API bloqueia todos os navegadores (a API
-  avisa no log ao subir). Liste os domínios do web e do admin separados por vírgula.
-- `POST /api/orders` e `POST /api/admin/session` têm limite de 10 requisições a
-  cada 15 min por IP. Atrás de proxy (Railway/Render) defina `TRUST_PROXY=1`.
-- O build da API (`npm run build --workspace api`) usa tsup e embute o
-  `@baruk/shared` no `dist/server.js`.
+## Documentação
 
-## Regras de negócio compartilhadas
-
-`packages/shared` concentra o que o cardápio e a API precisam concordar:
-- `unitPriceCents` — preço em centavos (produto + adicionais + bebida). O
-  cardápio mostra e a API cobra com a mesma função.
-- `isDrinkCategory` — a categoria com slug `bebidas`. O slug de categoria não é
-  editável pela API, então renomear a categoria não quebra a regra.
-- `weekdayInSaoPaulo` — dia da semana no fuso da pizzaria. Promoções com preço só
-  são aceitas no próprio dia.
-
-## Rotas da API
-
-| Rota | Acesso |
+| Documento | Conteúdo |
 |---|---|
-| `GET /api/menu` | público |
-| `POST /api/orders` | público (rate limit) — devolve o número do pedido (`#0042`) |
-| `GET /api/orders?view=open\|history&search=&page=` | admin — fila em aberto ou histórico de concluídos |
-| `GET /api/orders/:id` | admin — detalhes |
-| `PATCH /api/orders/:id/status` | admin — `RECEIVED → CONFIRMED → PREPARING → OUT_FOR_DELIVERY → COMPLETED` (só avança) |
-| `/api/products` | admin |
-| `GET /api/extras`, `GET /api/promos` | público |
-| `POST/PUT/DELETE /api/extras`, `/api/promos` | admin |
-| `/api/categories` | admin |
-
-Admin = header `x-admin-key` com o valor de `ADMIN_API_KEY`.
-
-## Avisos ao cliente pelo WhatsApp
-
-O checkout pede o WhatsApp do cliente (a API valida e guarda como `5511912345678`).
-No painel, ao passar o pedido para **Confirmado**, **Em preparo** ou **Saiu para
-entrega**, aparece o botão *Avisar cliente no WhatsApp*, que abre o WhatsApp da
-loja com a mensagem da etapa pronta — o lojista só toca em enviar.
-
-Os textos ficam em `packages/shared/src/whatsapp.ts` (`customerStatusMessage`).
-Para envio automático no futuro (API oficial WhatsApp Business Cloud, da Meta),
-basta a API chamar essa mesma função ao mudar o status e enviar pela Meta em vez
-de gerar o link — nenhuma tela precisa mudar.
-
-## Testes
-
-```bash
-npm test   # vitest em todos os workspaces (a API usa repositórios em memória, não precisa de banco)
-```
-
-## Deploy sugerido
-
-- **API**: Railway ou Render (sobem Node + Postgres juntos com pouca configuração).
-- **web** e **admin**: Vercel ou Netlify, um projeto para cada, apontando para
-  `apps/web` e `apps/admin`.
-
-## Próximos passos naturais
-
-- Guardar os pedidos (`/api/orders`) num painel de "pedidos do dia" no admin,
-  em vez de só mandar pro WhatsApp.
-- Upload de foto por sabor (hoje os cards usam um desenho genérico).
+| [ARQUITETURA](docs/ARQUITETURA.md) | Visão geral, camadas, fluxo de um pedido, decisões de design |
+| [REGRAS DE NEGÓCIO](docs/REGRAS-DE-NEGOCIO.md) | Preço, promoções, bebidas, etapas do pedido, telefone, WhatsApp |
+| [API](docs/API.md) | Todas as rotas, autenticação, formatos de requisição/resposta e erros |
+| [BANCO DE DADOS](docs/BANCO-DE-DADOS.md) | Modelos, migrações, seed e convenções de dados |
+| [FRONTENDS](docs/FRONTENDS.md) | Estrutura e fluxos do cardápio e do painel |
+| [DESENVOLVIMENTO](docs/DESENVOLVIMENTO.md) | Setup, scripts, testes, migrações, convenções de código e deploy |
+| [ESTADO ATUAL](docs/ESTADO-ATUAL.md) | O que está pronto, limitações conhecidas e próximos passos |
