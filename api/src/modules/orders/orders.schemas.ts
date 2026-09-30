@@ -1,5 +1,7 @@
 import { z } from "zod";
+import { ORDER_STATUSES, OrderStatus } from "@baruk/shared";
 import { entityId, optionalText, parseOrThrow, requireRecord, requiredText } from "../../core/validation";
+import { OrderSearch } from "./orders.repository";
 
 const MAX_ITEMS = 30;
 const MAX_QTY = 30;
@@ -50,4 +52,35 @@ export function parseCreateOrder(body: unknown): CreateOrderInput {
   const order = parseOrThrow(orderSchema, requireRecord(body), INVALID_ORDER);
   const items = order.items.map((item) => parseOrThrow(orderItemSchema, item, INVALID_ITEM));
   return { ...order, items };
+}
+
+export const MAX_PAGE_SIZE = 50;
+
+/** "#42", "0042" ou "42" buscam pelo número do pedido; qualquer outro texto busca pelo nome do cliente. */
+const searchSchema = z.string().max(100).transform((text): OrderSearch | null => {
+  const term = text.trim();
+  if (!term) return null;
+  const numberMatch = /^#?(\d{1,9})$/.exec(term);
+  return numberMatch ? { number: Number(numberMatch[1]) } : { customerName: term };
+});
+
+const listOrdersSchema = z.object({
+  view: z.enum(["open", "history"]).default("open"),
+  search: searchSchema.optional().transform((search) => search ?? null),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(20),
+});
+
+export type ListOrdersInput = z.infer<typeof listOrdersSchema>;
+
+export function parseListOrdersQuery(query: unknown): ListOrdersInput {
+  return parseOrThrow(listOrdersSchema, query, "Filtro de pedidos inválido.");
+}
+
+const statusChangeSchema = z.object({
+  status: z.enum(ORDER_STATUSES, { message: `Status inválido. Use: ${ORDER_STATUSES.join(", ")}.` }),
+});
+
+export function parseStatusChange(body: unknown): OrderStatus {
+  return parseOrThrow(statusChangeSchema, requireRecord(body)).status;
 }

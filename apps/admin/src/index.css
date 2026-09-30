@@ -28,3 +28,45 @@ td.actions button{border:none; background:none; cursor:pointer; font-size:13px; 
 .save-price{margin-left:6px;border:0;border-radius:6px;padding:6px 8px;background:var(--ok);color:#fff;cursor:pointer}
 .save-price:disabled,.primary:disabled{opacity:.6;cursor:wait}
 .logout{border:0;background:none;color:var(--accent);padding:6px 0;cursor:pointer}
+
+/* Navegação e botões auxiliares */
+.admin-nav{display:flex; gap:6px; margin:0 0 16px; border-bottom:1px solid var(--line)}
+.admin-nav button,.tab{border:0; background:none; padding:10px 14px; font:inherit; font-size:14px; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px}
+.admin-nav button.on,.tab.on{color:var(--ink); font-weight:600; border-bottom-color:var(--accent)}
+.count{display:inline-block; min-width:18px; margin-left:6px; padding:1px 6px; border-radius:9px; background:var(--accent); color:#fff; font-size:11px; font-weight:700}
+.tabs{display:flex; gap:4px; margin:-6px 0 14px; border-bottom:1px solid var(--line)}
+.secondary{border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:8px; padding:8px 12px; font:inherit; font-size:13px; cursor:pointer}
+.secondary:disabled{opacity:.5; cursor:default}
+.link{border:0; background:none; color:var(--accent); font:inherit; font-size:13px; cursor:pointer; padding:6px}
+
+/* Alerta de pedidos novos */
+.new-orders{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:0 0 16px; padding:12px 14px; border-radius:12px; background:#FDEBE6; border:1px solid var(--accent); font-size:14px}
+.new-orders .primary{width:auto; padding:8px 14px}
+
+/* Lista de pedidos */
+.search{display:flex; gap:6px; margin-bottom:10px}
+.search input{flex:1; min-width:0; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font:inherit; font-size:14px}
+.list-count{margin:0 0 8px}
+.order-list{display:flex; flex-direction:column; gap:8px}
+.order-card{border:1px solid var(--line); border-radius:12px; overflow:hidden}
+.order-card.open{border-color:var(--muted)}
+.order-summary{display:flex; align-items:center; gap:12px; width:100%; padding:12px; border:0; background:var(--card); font:inherit; text-align:left; cursor:pointer}
+.order-number{font-weight:700; font-size:15px; color:var(--accent); font-variant-numeric:tabular-nums}
+.order-main{display:flex; flex-direction:column; gap:2px; flex:1; min-width:0}
+.order-side{display:flex; flex-direction:column; align-items:flex-end; gap:4px; font-size:14px}
+.order-details{padding:4px 12px 12px; border-top:1px solid var(--line)}
+.order-details th,.order-details td{padding-right:8px}
+.order-details .num{text-align:right; padding-right:0; white-space:nowrap}
+.order-details tfoot td{font-weight:700; border-bottom:0}
+.order-info{display:grid; grid-template-columns:max-content 1fr; gap:4px 12px; margin:0 0 12px; font-size:13.5px}
+.order-info dt{color:var(--muted)}
+.order-info dd{margin:0; white-space:pre-wrap}
+.order-actions{display:flex; gap:8px}
+.order-actions .primary{width:auto}
+.pagination{display:flex; align-items:center; justify-content:space-between; margin-top:14px}
+
+/* Status do pedido */
+.status{display:inline-block; padding:2px 8px; border-radius:10px; font-size:11.5px; font-weight:600; white-space:nowrap}
+.status-received{background:#FDEBE6; color:var(--accent)}
+.status-preparing{background:#FFF4D6; color:#8A6100}
+.status-completed{background:#E6F0E2; color:var(--ok)}

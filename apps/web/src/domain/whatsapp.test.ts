@@ -23,6 +23,11 @@ describe("buildOrderMessage", () => {
     expect(message).toContain("*Nome:* Ana\n*Endereço:* Rua A, 1\n*Obs:* sem cebola");
   });
 
+  it("identifica o pedido pelo número registrado no painel", () => {
+    expect(buildOrderMessage({ orderNumber: 42, lines: [], total: 0, promo: null, customer })).toMatch(/^\*Novo pedido #0042 — Baruk/);
+    expect(buildOrderMessage({ lines: [], total: 0, promo: null, customer })).toMatch(/^\*Novo pedido — Baruk/);
+  });
+
   it("inclui a promoção aplicada", () => {
     const promo = { id: "p", weekday: 0, label: "Domingo", title: "Família", description: "Refri grátis" };
     expect(buildOrderMessage({ lines: [], total: 0, promo, customer })).toContain("*Promoção:* Domingo — Família (Refri grátis)");

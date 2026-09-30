@@ -138,8 +138,10 @@ npm run dev:admin      # http://localhost:5174  (painel do lojista)
 | Rota | Acesso |
 |---|---|
 | `GET /api/menu` | público |
-| `POST /api/orders` | público (rate limit) |
-| `GET /api/orders` | admin |
+| `POST /api/orders` | público (rate limit) — devolve o número do pedido (`#0042`) |
+| `GET /api/orders?view=open\|history&search=&page=` | admin — fila em aberto ou histórico de concluídos |
+| `GET /api/orders/:id` | admin — detalhes |
+| `PATCH /api/orders/:id/status` | admin — `RECEIVED → PREPARING → COMPLETED` (só avança) |
 | `/api/products` | admin |
 | `GET /api/extras`, `GET /api/promos` | público |
 | `POST/PUT/DELETE /api/extras`, `/api/promos` | admin |

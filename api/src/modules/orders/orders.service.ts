@@ -1,12 +1,11 @@
-import { weekdayInSaoPaulo } from "@baruk/shared";
+import { canChangeOrderStatus, formatOrderNumber, OPEN_ORDER_STATUSES, ORDER_STATUS_LABELS, OrderStatus, weekdayInSaoPaulo } from "@baruk/shared";
+import { ConflictError, NotFoundError } from "../../core/errors";
 import { ProductRepository } from "../products/products.repository";
 import { ExtraRepository } from "../extras/extras.repository";
 import { PromoRepository } from "../promos/promos.repository";
-import { OrderRepository } from "./orders.repository";
+import { Order, OrderQuery, OrderRepository } from "./orders.repository";
 import { OrderCatalog, priceOrder, referencedIds } from "./order-pricing";
-import { CreateOrderInput, OrderItemInput } from "./orders.schemas";
-
-const RECENT_ORDERS_LIMIT = 100;
+import { CreateOrderInput, ListOrdersInput, OrderItemInput } from "./orders.schemas";
 
 export type Clock = () => Date;
 
@@ -26,8 +25,33 @@ export class OrdersService {
     return this.orders.create({ ...customer, total, items: pricedItems });
   }
 
-  listRecent() {
-    return this.orders.listRecent(RECENT_ORDERS_LIMIT);
+  /** Fila de pedidos em aberto (mais antigos primeiro) ou histórico de concluídos. */
+  async list({ view, search, page, pageSize }: ListOrdersInput) {
+    const query: OrderQuery = view === "open"
+      ? { statuses: OPEN_ORDER_STATUSES, sort: "oldestFirst", search, page, pageSize }
+      : { statuses: ["COMPLETED"], sort: "recentlyCompleted", search, page, pageSize };
+    const [{ items, total }, latestOrderNumber] = await Promise.all([
+      this.orders.findPage(query),
+      this.orders.findLatestNumber(),
+    ]);
+    return { items, total, page, pageSize, latestOrderNumber };
+  }
+
+  async get(id: string): Promise<Order> {
+    const order = await this.orders.findById(id);
+    if (!order) throw new NotFoundError("Pedido não encontrado.");
+    return order;
+  }
+
+  /** Avança o status do pedido; concluir registra a data e o move para o histórico. */
+  async changeStatus(id: string, status: OrderStatus): Promise<Order> {
+    const order = await this.get(id);
+    if (!canChangeOrderStatus(order.status, status)) {
+      throw new ConflictError(
+        `O pedido ${formatOrderNumber(order.number)} está "${ORDER_STATUS_LABELS[order.status]}" e não pode passar para "${ORDER_STATUS_LABELS[status]}".`,
+      );
+    }
+    return this.orders.updateStatus(id, status, status === "COMPLETED" ? this.now() : null);
   }
 
   private async loadCatalog(items: OrderItemInput[]): Promise<OrderCatalog> {

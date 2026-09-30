@@ -44,6 +44,7 @@ export function useCheckout(appliedPromo: Promo | null, onSent: () => void) {
 
     const confirmed = registration.status === "confirmed" ? registration.order : null;
     const message = buildOrderMessage({
+      orderNumber: confirmed?.number ?? null,
       lines: confirmed?.items ?? lines,
       total: confirmed?.total ?? totalPrice,
       promo: appliedPromo,

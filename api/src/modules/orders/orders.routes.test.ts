@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import request from "supertest";
 import { Express } from "express";
-import { createTestApp, TEST_ADMIN_KEY, TUESDAY } from "../../test-support/test-app";
+import { createTestApp, TEST_ADMIN_KEY, TUESDAY, TUESDAY_NOON } from "../../test-support/test-app";
 import { InMemoryRepositories } from "../../test-support/in-memory-repositories";
 
 const customer = { customerName: "Ana", address: "Rua A, 1" };
@@ -69,11 +69,88 @@ describe("POST /api/orders", () => {
   });
 });
 
-describe("GET /api/orders", () => {
-  it("lista os pedidos mais recentes para o admin", async () => {
-    await postOrder([{ productId: "costela", qty: 1 }]);
-    const res = await request(app).get("/api/orders").set("x-admin-key", TEST_ADMIN_KEY);
+describe("gerenciamento de pedidos (admin)", () => {
+  const admin = { "x-admin-key": TEST_ADMIN_KEY };
+  const listOrders = (query = "") => request(app).get(`/api/orders${query}`).set(admin);
+  const changeStatus = (id: string, status: string) => request(app).patch(`/api/orders/${id}/status`).set(admin).send({ status });
+
+  async function placeOrders(...names: string[]) {
+    const created = [];
+    for (const customerName of names) created.push((await postOrder([{ productId: "costela", qty: 1 }], { customerName })).body);
+    return created;
+  }
+
+  it("novo pedido recebe número sequencial e status Recebido", async () => {
+    const [first, second] = await placeOrders("Ana", "Bia");
+    expect(first).toMatchObject({ number: 1, status: "RECEIVED", completedAt: null });
+    expect(second.number).toBe(2);
+  });
+
+  it("exige a chave administrativa", async () => {
+    expect((await request(app).get("/api/orders")).status).toBe(401);
+    expect((await request(app).patch("/api/orders/x/status").send({ status: "COMPLETED" })).status).toBe(401);
+  });
+
+  it("lista a fila de abertos do mais antigo para o mais novo", async () => {
+    await placeOrders("Ana", "Bia");
+    const res = await listOrders();
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(1);
+    expect(res.body).toMatchObject({ total: 2, page: 1, pageSize: 20, latestOrderNumber: 2 });
+    expect(res.body.items.map((order: { customerName: string }) => order.customerName)).toEqual(["Ana", "Bia"]);
+  });
+
+  it("mostra os detalhes de um pedido", async () => {
+    const [order] = await placeOrders("Ana");
+    const res = await request(app).get(`/api/orders/${order.id}`).set(admin);
+    expect(res.body).toMatchObject({ number: 1, customerName: "Ana", items: [{ label: "Pizza Costela", qty: 1 }] });
+    expect((await request(app).get("/api/orders/nao-existe").set(admin)).status).toBe(404);
+  });
+
+  it("concluir move o pedido da fila para o histórico com a data de conclusão", async () => {
+    const [ana, bia] = await placeOrders("Ana", "Bia");
+    expect((await changeStatus(ana.id, "PREPARING")).body.status).toBe("PREPARING");
+
+    const completed = await changeStatus(ana.id, "COMPLETED");
+    expect(completed.status).toBe(200);
+    expect(completed.body.completedAt).toBe(TUESDAY_NOON.toISOString());
+
+    expect((await listOrders("?view=open")).body.items.map((order: { id: string }) => order.id)).toEqual([bia.id]);
+    const history = await listOrders("?view=history");
+    expect(history.body).toMatchObject({ total: 1, items: [{ id: ana.id, status: "COMPLETED" }] });
+  });
+
+  it("não deixa o status voltar nem repetir", async () => {
+    const [order] = await placeOrders("Ana");
+    await changeStatus(order.id, "COMPLETED");
+    const res = await changeStatus(order.id, "PREPARING");
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('O pedido #0001 está "Concluído" e não pode passar para "Em preparo".');
+  });
+
+  it("valida o status enviado", async () => {
+    const [order] = await placeOrders("Ana");
+    const res = await changeStatus(order.id, "ENTREGUE");
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/Status inválido/);
+  });
+
+  it("busca no histórico por número ou nome do cliente", async () => {
+    const orders = await placeOrders("Ana Souza", "Bia", "Carlos");
+    for (const order of orders) await changeStatus(order.id, "COMPLETED");
+
+    expect((await listOrders("?view=history&search=%230002")).body.items.map((order: { customerName: string }) => order.customerName)).toEqual(["Bia"]);
+    expect((await listOrders("?view=history&search=souza")).body.items.map((order: { customerName: string }) => order.customerName)).toEqual(["Ana Souza"]);
+  });
+
+  it("pagina os resultados", async () => {
+    await placeOrders("A", "B", "C");
+    const res = await listOrders("?page=2&pageSize=2");
+    expect(res.body).toMatchObject({ total: 3, page: 2, pageSize: 2 });
+    expect(res.body.items).toHaveLength(1);
+    expect((await listOrders("?pageSize=500")).status).toBe(400);
+  });
+
+  it("respostas da API não ficam em cache no navegador", async () => {
+    expect((await listOrders()).headers["cache-control"]).toBe("no-store");
   });
 });

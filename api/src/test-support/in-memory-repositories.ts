@@ -1,11 +1,11 @@
-import { Category, Extra } from "@baruk/shared";
+import { Category, Extra, OrderStatus } from "@baruk/shared";
 import { NotFoundError } from "../core/errors";
 import { Repositories } from "../container";
 import { CategoryChanges, CategoryRepository, NewCategory } from "../modules/categories/categories.repository";
 import { NewProduct, ProductChanges, ProductRecord, ProductRepository } from "../modules/products/products.repository";
 import { ExtraChanges, ExtraRepository, NewExtra } from "../modules/extras/extras.repository";
 import { NewPromo, PromoChanges, PromoRecord, PromoRepository } from "../modules/promos/promos.repository";
-import { NewOrder, Order, OrderRepository } from "../modules/orders/orders.repository";
+import { NewOrder, Order, OrderQuery, OrderRepository } from "../modules/orders/orders.repository";
 
 /**
  * Implementações em memória das interfaces de repositório. Os testes exercitam
@@ -163,17 +163,45 @@ class InMemoryOrderRepository implements OrderRepository {
   readonly table = new InMemoryTable<Order>("order");
 
   async create({ items, ...order }: NewOrder) {
-    const id = `order-${this.table.rows.length + 1}`;
+    const number = this.table.rows.length + 1;
+    const id = `order-${number}`;
+    // Cada pedido nasce 1 min depois do anterior, para a ordenação ser determinística.
+    const createdAt = new Date(Date.UTC(2026, 8, 29, 12, number));
     return this.table.insert({
       ...order,
       id,
-      createdAt: new Date(),
+      number,
+      status: "RECEIVED",
+      createdAt,
+      updatedAt: createdAt,
+      completedAt: null,
       items: items.map((item, index) => ({ ...item, id: `${id}-item-${index + 1}`, orderId: id })),
     });
   }
 
-  async listRecent(limit: number) {
-    return [...this.table.rows].reverse().slice(0, limit);
+  async findPage({ statuses, search, sort, page, pageSize }: OrderQuery) {
+    const matches = this.table.rows.filter((order) =>
+      statuses.includes(order.status) &&
+      (!search || ("number" in search
+        ? order.number === search.number
+        : order.customerName.toLowerCase().includes(search.customerName.toLowerCase()))));
+    const time = (date: Date | null) => date?.getTime() ?? 0;
+    const sorted = sort === "oldestFirst"
+      ? matches.sort((a, b) => time(a.createdAt) - time(b.createdAt))
+      : matches.sort((a, b) => time(b.completedAt) - time(a.completedAt));
+    return { items: sorted.slice((page - 1) * pageSize, page * pageSize), total: matches.length };
+  }
+
+  async findById(id: string) {
+    return this.table.rows.find((order) => order.id === id) ?? null;
+  }
+
+  async findLatestNumber() {
+    return this.table.rows.length ? Math.max(...this.table.rows.map((order) => order.number)) : null;
+  }
+
+  async updateStatus(id: string, status: OrderStatus, completedAt: Date | null) {
+    return this.table.update(id, { status, completedAt, updatedAt: new Date() });
   }
 }
 

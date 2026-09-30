@@ -1,4 +1,4 @@
-import { Promo, formatBRL, toCents } from "@baruk/shared";
+import { Promo, formatBRL, formatOrderNumber, toCents } from "@baruk/shared";
 
 export type Customer = { name: string; address: string; notes: string };
 export type MessageLine = { label: string; qty: number; unitPrice: number };
@@ -15,13 +15,16 @@ function formatLine({ label, qty, unitPrice }: MessageLine): string {
   return `• ${qty}x ${label} — ${formatBRL((toCents(unitPrice) * qty) / 100)}`;
 }
 
-export function buildOrderMessage({ lines, total, promo, customer }: {
+export function buildOrderMessage({ orderNumber = null, lines, total, promo, customer }: {
+  /** Presente quando a API registrou o pedido; ausente se ela estava fora do ar. */
+  orderNumber?: number | null;
   lines: MessageLine[];
   total: number;
   promo: Promo | null;
   customer: Customer;
 }): string {
-  let message = `*Novo pedido — ${STORE_NAME}*\n\n${lines.map(formatLine).join("\n")}\n\n*Total:* ${formatBRL(total)}`;
+  const title = orderNumber === null ? "Novo pedido" : `Novo pedido ${formatOrderNumber(orderNumber)}`;
+  let message = `*${title} — ${STORE_NAME}*\n\n${lines.map(formatLine).join("\n")}\n\n*Total:* ${formatBRL(total)}`;
   if (promo) message += `\n*Promoção:* ${promo.label} — ${promo.title} (${promo.description})`;
   message += `\n\n*Nome:* ${customer.name}\n*Endereço:* ${customer.address}`;
   if (customer.notes) message += `\n*Obs:* ${customer.notes}`;

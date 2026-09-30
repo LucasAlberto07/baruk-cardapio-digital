@@ -5,6 +5,7 @@ import { asyncHandler } from "./http/async-handler";
 import { createAdminAuth } from "./http/admin-auth";
 import { createCors } from "./http/cors";
 import { errorHandler } from "./http/error-handler";
+import { noStore } from "./http/no-store";
 import { createAdminSessionLimiter } from "./http/rate-limit";
 import { createMenuRouter } from "./modules/menu/menu.routes";
 import { createCategoriesRouter } from "./modules/categories/categories.routes";
@@ -28,6 +29,7 @@ export function createApp({ config, services, checkDatabase }: AppDependencies) 
   app.set("trust proxy", config.trustProxy);
   app.use(createCors(config.corsOrigins));
   app.use(express.json({ limit: "64kb" }));
+  app.use("/api", noStore);
 
   app.get("/health", (_req, res) => res.json({ ok: true }));
   app.get("/ready", asyncHandler(async (_req, res) => {

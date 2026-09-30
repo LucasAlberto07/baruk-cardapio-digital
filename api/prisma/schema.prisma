@@ -45,14 +45,28 @@ model Promo {
   note        String?
 }
 
+enum OrderStatus {
+  RECEIVED
+  PREPARING
+  COMPLETED
+}
+
 model Order {
   id           String      @id @default(cuid())
+  /// Número sequencial exibido ao cliente e ao lojista (#0001).
+  number       Int         @unique @default(autoincrement())
+  status       OrderStatus @default(RECEIVED)
   customerName String
   address      String
   notes        String?
   total        Decimal     @db.Decimal(10, 2)
   createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @default(now()) @updatedAt
+  completedAt  DateTime?
   items        OrderItem[]
+
+  @@index([status, createdAt])
+  @@index([completedAt])
 }
 
 model OrderItem {
