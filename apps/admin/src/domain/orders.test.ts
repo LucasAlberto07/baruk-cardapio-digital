@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { countNewOrders, elapsedSince, formatDateTime, totalPages } from "./orders";
+import { Order } from "@baruk/shared";
+import { countNewOrders, customerNotificationLink, elapsedSince, formatDateTime, statusActions, totalPages } from "./orders";
 
 describe("formatDateTime", () => {
   it("mostra no fuso de São Paulo", () => {
@@ -34,5 +35,34 @@ describe("totalPages", () => {
   it("tem ao menos uma página", () => {
     expect(totalPages(0, 20)).toBe(1);
     expect(totalPages(41, 20)).toBe(3);
+  });
+});
+
+describe("statusActions", () => {
+  it("destaca a próxima etapa e oferece concluir direto", () => {
+    expect(statusActions("RECEIVED")).toEqual([
+      { status: "CONFIRMED", label: "Confirmar pedido", primary: true },
+      { status: "COMPLETED", label: "Concluir pedido", primary: false },
+    ]);
+  });
+
+  it("na última etapa só resta concluir", () => {
+    expect(statusActions("OUT_FOR_DELIVERY")).toEqual([{ status: "COMPLETED", label: "Concluir pedido", primary: true }]);
+    expect(statusActions("COMPLETED")).toEqual([]);
+  });
+});
+
+describe("customerNotificationLink", () => {
+  const order = { number: 42, customerName: "Ana", customerPhone: "5511912345678", total: 50, address: "Rua A" } as Order;
+
+  it("gera o link com o aviso da etapa atual", () => {
+    const link = customerNotificationLink({ ...order, status: "OUT_FOR_DELIVERY" });
+    expect(link).toMatch(/^https:\/\/wa\.me\/5511912345678\?text=/);
+    expect(decodeURIComponent(link!.split("text=")[1])).toContain("#0042 *saiu para entrega*");
+  });
+
+  it("não gera link sem telefone ou em etapa sem aviso", () => {
+    expect(customerNotificationLink({ ...order, status: "RECEIVED" })).toBeNull();
+    expect(customerNotificationLink({ ...order, status: "CONFIRMED", customerPhone: null })).toBeNull();
   });
 });

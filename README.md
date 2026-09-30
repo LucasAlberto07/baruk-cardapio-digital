@@ -141,13 +141,25 @@ npm run dev:admin      # http://localhost:5174  (painel do lojista)
 | `POST /api/orders` | público (rate limit) — devolve o número do pedido (`#0042`) |
 | `GET /api/orders?view=open\|history&search=&page=` | admin — fila em aberto ou histórico de concluídos |
 | `GET /api/orders/:id` | admin — detalhes |
-| `PATCH /api/orders/:id/status` | admin — `RECEIVED → PREPARING → COMPLETED` (só avança) |
+| `PATCH /api/orders/:id/status` | admin — `RECEIVED → CONFIRMED → PREPARING → OUT_FOR_DELIVERY → COMPLETED` (só avança) |
 | `/api/products` | admin |
 | `GET /api/extras`, `GET /api/promos` | público |
 | `POST/PUT/DELETE /api/extras`, `/api/promos` | admin |
 | `/api/categories` | admin |
 
 Admin = header `x-admin-key` com o valor de `ADMIN_API_KEY`.
+
+## Avisos ao cliente pelo WhatsApp
+
+O checkout pede o WhatsApp do cliente (a API valida e guarda como `5511912345678`).
+No painel, ao passar o pedido para **Confirmado**, **Em preparo** ou **Saiu para
+entrega**, aparece o botão *Avisar cliente no WhatsApp*, que abre o WhatsApp da
+loja com a mensagem da etapa pronta — o lojista só toca em enviar.
+
+Os textos ficam em `packages/shared/src/whatsapp.ts` (`customerStatusMessage`).
+Para envio automático no futuro (API oficial WhatsApp Business Cloud, da Meta),
+basta a API chamar essa mesma função ao mudar o status e enviar pela Meta em vez
+de gerar o link — nenhuma tela precisa mudar.
 
 ## Testes
 

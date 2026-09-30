@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { formatBRL, formatOrderNumber, nextOrderStatuses, Order, OrderStatus, toCents } from "@baruk/shared";
-import { elapsedSince, formatDateTime, STATUS_ACTION_LABELS } from "../domain/orders";
+import { formatBRL, formatOrderNumber, formatPhone, Order, ORDER_STATUS_LABELS, OrderStatus, toCents } from "@baruk/shared";
+import { customerNotificationLink, elapsedSince, formatDateTime, statusActions } from "../domain/orders";
 import { StatusBadge } from "./StatusBadge";
 
 type Props = {
@@ -58,24 +58,40 @@ function OrderDetails({ order, onChangeStatus }: Props) {
       </table>
 
       <dl className="order-info">
+        {order.customerPhone && <><dt>WhatsApp</dt><dd>{formatPhone(order.customerPhone)}</dd></>}
         <dt>Endereço</dt><dd>{order.address}</dd>
         {order.notes && <><dt>Observações</dt><dd>{order.notes}</dd></>}
         <dt>Recebido em</dt><dd>{formatDateTime(order.createdAt)}</dd>
         {order.completedAt && <><dt>Concluído em</dt><dd>{formatDateTime(order.completedAt)}</dd></>}
       </dl>
 
+      <CustomerNotification order={order} />
+
       <div className="order-actions">
-        {nextOrderStatuses(order.status).map((status) => (
+        {statusActions(order.status).map((action) => (
           <button
-            key={status}
-            className={status === "COMPLETED" ? "primary" : "secondary"}
+            key={action.status}
+            className={action.primary ? "primary" : "secondary"}
             disabled={updating}
-            onClick={() => changeTo(status)}
+            onClick={() => changeTo(action.status)}
           >
-            {STATUS_ACTION_LABELS[status]}
+            {action.label}
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** Aviso da etapa atual para o cliente: abre o WhatsApp com a mensagem pronta. */
+function CustomerNotification({ order }: { order: Order }) {
+  const link = customerNotificationLink(order);
+  if (!link) return null;
+
+  return (
+    <div className="notify">
+      <span>Etapa <strong>{ORDER_STATUS_LABELS[order.status]}</strong>: avise o cliente.</span>
+      <a className="whatsapp-btn" href={link} target="_blank" rel="noopener noreferrer">Avisar cliente no WhatsApp</a>
     </div>
   );
 }

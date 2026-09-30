@@ -4,7 +4,7 @@ import { Express } from "express";
 import { createTestApp, TEST_ADMIN_KEY, TUESDAY, TUESDAY_NOON } from "../../test-support/test-app";
 import { InMemoryRepositories } from "../../test-support/in-memory-repositories";
 
-const customer = { customerName: "Ana", address: "Rua A, 1" };
+const customer = { customerName: "Ana", customerPhone: "(11) 91234-5678", address: "Rua A, 1" };
 
 let app: Express;
 let repositories: InMemoryRepositories;
@@ -31,6 +31,17 @@ describe("POST /api/orders", () => {
     expect(res.body.total).toBe(299.97);
     expect(res.body.items[0]).toMatchObject({ label: "Pizza Costela (8 fatias) + Alho + Sprite 2L", qty: 3, unitPrice: 99.99 });
     expect(repositories.orders.table.rows).toHaveLength(1);
+  });
+
+  it("guarda o telefone normalizado para os avisos no WhatsApp", async () => {
+    const res = await postOrder([{ productId: "costela", qty: 1 }]);
+    expect(res.body.customerPhone).toBe("5511912345678");
+  });
+
+  it.each([["sem telefone", undefined], ["telefone sem DDD", "91234-5678"], ["telefone numérico", 11912345678]])("rejeita %s", async (_case, customerPhone) => {
+    const res = await postOrder([{ productId: "costela", qty: 1 }], { customerPhone });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Informe um telefone válido com DDD, ex.: (11) 91234-5678.");
   });
 
   it("guarda observações sem espaços e vazias como null", async () => {
@@ -117,6 +128,16 @@ describe("gerenciamento de pedidos (admin)", () => {
     expect((await listOrders("?view=open")).body.items.map((order: { id: string }) => order.id)).toEqual([bia.id]);
     const history = await listOrders("?view=history");
     expect(history.body).toMatchObject({ total: 1, items: [{ id: ana.id, status: "COMPLETED" }] });
+  });
+
+  it("percorre as etapas avisadas ao cliente até concluir", async () => {
+    const [order] = await placeOrders("Ana");
+    for (const status of ["CONFIRMED", "PREPARING", "OUT_FOR_DELIVERY"]) {
+      const res = await changeStatus(order.id, status);
+      expect(res.body).toMatchObject({ status, completedAt: null });
+    }
+    expect((await listOrders("?view=open")).body.items[0].status).toBe("OUT_FOR_DELIVERY");
+    expect((await changeStatus(order.id, "COMPLETED")).body.completedAt).not.toBeNull();
   });
 
   it("não deixa o status voltar nem repetir", async () => {

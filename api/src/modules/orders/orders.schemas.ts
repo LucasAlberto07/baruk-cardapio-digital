@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { ORDER_STATUSES, OrderStatus } from "@baruk/shared";
+import { normalizeBrazilianPhone, ORDER_STATUSES, OrderStatus } from "@baruk/shared";
+import { ValidationError } from "../../core/errors";
 import { entityId, optionalText, parseOrThrow, requireRecord, requiredText } from "../../core/validation";
 import { OrderSearch } from "./orders.repository";
 
@@ -7,6 +8,7 @@ const MAX_ITEMS = 30;
 const MAX_QTY = 30;
 const MAX_EXTRAS_PER_ITEM = 10;
 const INVALID_ORDER = "Pedido inválido: informe cliente, endereço e de 1 a 30 itens.";
+const INVALID_PHONE = "Informe um telefone válido com DDD, ex.: (11) 91234-5678.";
 const INVALID_ITEM = "Um ou mais itens do pedido são inválidos.";
 
 const qty = z.number().int().min(1).max(MAX_QTY);
@@ -37,6 +39,8 @@ const orderItemSchema = z.union([promoItemSchema, productItemSchema]);
 
 const orderSchema = z.object({
   customerName: requiredText(100),
+  // Validado à parte para o cliente receber uma mensagem específica sobre o telefone.
+  customerPhone: z.unknown(),
   address: requiredText(300),
   notes: optionalText(500).optional().transform((notes) => notes || null),
   items: z.array(z.unknown()).min(1).max(MAX_ITEMS),
@@ -45,13 +49,19 @@ const orderSchema = z.object({
 export type PromoItemInput = z.infer<typeof promoItemSchema>;
 export type ProductItemInput = z.infer<typeof productItemSchema>;
 export type OrderItemInput = z.infer<typeof orderItemSchema>;
-export type CreateOrderInput = Omit<z.infer<typeof orderSchema>, "items"> & { items: OrderItemInput[] };
+export type CreateOrderInput = Omit<z.infer<typeof orderSchema>, "items" | "customerPhone"> & {
+  /** Só dígitos, com DDI (ex.: "5511912345678"). */
+  customerPhone: string;
+  items: OrderItemInput[];
+};
 
 /** Valida o pedido em duas etapas para manter mensagens distintas para o pedido e para os itens. */
 export function parseCreateOrder(body: unknown): CreateOrderInput {
   const order = parseOrThrow(orderSchema, requireRecord(body), INVALID_ORDER);
+  const customerPhone = typeof order.customerPhone === "string" ? normalizeBrazilianPhone(order.customerPhone) : null;
+  if (!customerPhone) throw new ValidationError(INVALID_PHONE);
   const items = order.items.map((item) => parseOrThrow(orderItemSchema, item, INVALID_ITEM));
-  return { ...order, items };
+  return { ...order, customerPhone, items };
 }
 
 export const MAX_PAGE_SIZE = 50;

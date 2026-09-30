@@ -1,11 +1,33 @@
-import { OrderStatus, STORE_TIME_ZONE } from "@baruk/shared";
+import { customerStatusMessage, nextOrderStatuses, Order, OrderStatus, STORE_TIME_ZONE, whatsappLink } from "@baruk/shared";
 
 /** Texto do botão que leva o pedido a cada status (RECEIVED é o inicial, não tem botão na prática). */
 export const STATUS_ACTION_LABELS: Record<OrderStatus, string> = {
   RECEIVED: "Marcar como recebido",
+  CONFIRMED: "Confirmar pedido",
   PREPARING: "Iniciar preparo",
+  OUT_FOR_DELIVERY: "Saiu para entrega",
   COMPLETED: "Concluir pedido",
 };
+
+export type StatusAction = { status: OrderStatus; label: string; primary: boolean };
+
+/**
+ * Botões de status de um pedido: a próxima etapa em destaque e, se ela ainda
+ * não for a conclusão, um atalho para concluir direto (ex.: retirada no balcão).
+ */
+export function statusActions(current: OrderStatus): StatusAction[] {
+  const [next] = nextOrderStatuses(current);
+  if (!next) return [];
+  const actions: StatusAction[] = [{ status: next, label: STATUS_ACTION_LABELS[next], primary: true }];
+  if (next !== "COMPLETED") actions.push({ status: "COMPLETED", label: STATUS_ACTION_LABELS.COMPLETED, primary: false });
+  return actions;
+}
+
+/** Link do WhatsApp com o aviso da etapa atual, se o pedido tem telefone e a etapa avisa o cliente. */
+export function customerNotificationLink(order: Order): string | null {
+  const message = customerStatusMessage(order, order.status);
+  return order.customerPhone && message ? whatsappLink(order.customerPhone, message) : null;
+}
 
 const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
   timeZone: STORE_TIME_ZONE,

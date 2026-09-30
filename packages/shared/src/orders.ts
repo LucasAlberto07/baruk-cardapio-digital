@@ -1,21 +1,23 @@
 /** Ciclo de vida de um pedido. A ordem do array é a ordem do fluxo. */
-export const ORDER_STATUSES = ["RECEIVED", "PREPARING", "COMPLETED"] as const;
+export const ORDER_STATUSES = ["RECEIVED", "CONFIRMED", "PREPARING", "OUT_FOR_DELIVERY", "COMPLETED"] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   RECEIVED: "Recebido",
+  CONFIRMED: "Confirmado",
   PREPARING: "Em preparo",
+  OUT_FOR_DELIVERY: "Saiu para entrega",
   COMPLETED: "Concluído",
 };
 
 /** Pedidos em aberto aparecem na fila do painel; concluídos vão para o histórico. */
-export const OPEN_ORDER_STATUSES: OrderStatus[] = ["RECEIVED", "PREPARING"];
+export const OPEN_ORDER_STATUSES: OrderStatus[] = ORDER_STATUSES.filter((status) => status !== "COMPLETED");
 
 export function isOrderStatus(value: unknown): value is OrderStatus {
   return typeof value === "string" && (ORDER_STATUSES as readonly string[]).includes(value);
 }
 
-/** O pedido só avança (Recebido → Em preparo → Concluído); pode pular etapas, nunca voltar. */
+/** O pedido só avança no fluxo; pode pular etapas, nunca voltar. */
 export function canChangeOrderStatus(from: OrderStatus, to: OrderStatus): boolean {
   return ORDER_STATUSES.indexOf(to) > ORDER_STATUSES.indexOf(from);
 }
@@ -37,6 +39,8 @@ export type Order = {
   number: number;
   status: OrderStatus;
   customerName: string;
+  /** Telefone com DDI, só dígitos (ex.: "5511912345678"); nulo em pedidos antigos. */
+  customerPhone: string | null;
   address: string;
   notes: string | null;
   total: number;

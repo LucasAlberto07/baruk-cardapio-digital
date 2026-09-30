@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { ApiError, Promo } from "@baruk/shared";
+import { ApiError, Promo, whatsappLink } from "@baruk/shared";
 import { env } from "../config/env";
 import { ConfirmedOrder, submitOrder } from "../api/orders-api";
 import { CartLine, toOrderItems } from "../domain/cart";
-import { buildOrderMessage, Customer, validateCustomer, whatsappUrl } from "../domain/whatsapp";
+import { buildOrderMessage, Customer, validateCustomer } from "../domain/whatsapp";
 import { useCart } from "../context/CartContext";
 
 type Registration =
@@ -14,7 +14,7 @@ type Registration =
 
 async function registerOrder(customer: Customer, lines: CartLine[]): Promise<Registration> {
   try {
-    const order = await submitOrder({ customerName: customer.name, address: customer.address, notes: customer.notes, items: toOrderItems(lines) });
+    const order = await submitOrder({ customerName: customer.name, customerPhone: customer.phone, address: customer.address, notes: customer.notes, items: toOrderItems(lines) });
     return { status: "confirmed", order };
   } catch (cause) {
     if (cause instanceof ApiError) return { status: "rejected", reason: cause.message };
@@ -50,7 +50,7 @@ export function useCheckout(appliedPromo: Promo | null, onSent: () => void) {
       promo: appliedPromo,
       customer,
     });
-    window.open(whatsappUrl(env.whatsappNumber, message), "_blank");
+    window.open(whatsappLink(env.whatsappNumber, message), "_blank");
     clear();
     onSent();
   }

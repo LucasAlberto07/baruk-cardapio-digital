@@ -52,6 +52,8 @@ export type CartLineSelection = {
 
 export type OrderPayload = {
   customerName: string;
+  /** Telefone do cliente para os avisos no WhatsApp (qualquer formato; a API normaliza). */
+  customerPhone: string;
   address: string;
   notes?: string;
   // Cada item é um produto (productId) OU uma promoção do dia (promoId), nunca os dois.

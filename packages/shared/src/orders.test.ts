@@ -11,7 +11,8 @@ describe("status do pedido", () => {
   });
 
   it("lista os próximos status possíveis", () => {
-    expect(nextOrderStatuses("RECEIVED")).toEqual(["PREPARING", "COMPLETED"]);
+    expect(nextOrderStatuses("RECEIVED")).toEqual(["CONFIRMED", "PREPARING", "OUT_FOR_DELIVERY", "COMPLETED"]);
+    expect(nextOrderStatuses("OUT_FOR_DELIVERY")).toEqual(["COMPLETED"]);
     expect(nextOrderStatuses("COMPLETED")).toEqual([]);
   });
 

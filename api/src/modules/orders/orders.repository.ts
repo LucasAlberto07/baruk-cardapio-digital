@@ -9,6 +9,7 @@ export type Order = {
   number: number;
   status: OrderStatus;
   customerName: string;
+  customerPhone: string | null;
   address: string;
   notes: string | null;
   total: number;
@@ -17,7 +18,7 @@ export type Order = {
   completedAt: Date | null;
   items: OrderItem[];
 };
-export type NewOrder = Pick<Order, "customerName" | "address" | "notes" | "total"> & { items: PricedOrderItem[] };
+export type NewOrder = Pick<Order, "customerName" | "address" | "notes" | "total"> & { customerPhone: string; items: PricedOrderItem[] };
 
 export type OrderSearch = { number: number } | { customerName: string };
 export type OrderQuery = {
